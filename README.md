@@ -36,10 +36,6 @@ The extension uses intelligent emoji indicators to show review urgency at a glan
 - `[Draft]` - Pull request is still in draft mode
 - `[⚡]` - Merge conflicts detected
 
-## 📸 Screenshots
-
-![Screenshot showing the GitHub Review Manager in the Activity Bar with priority indicators and author avatars]
-
 ## 🚀 Quick Start
 
 1. **Install the extension** from the VS Code Marketplace
@@ -49,6 +45,20 @@ The extension uses intelligent emoji indicators to show review urgency at a glan
    - Set your GitHub Personal Access Token with `repo` scope
    - [Generate a token here](https://github.com/settings/tokens)
 3. **View your review requests** in the Activity Bar or Explorer sidebar
+
+## 📸 Screenshots
+
+### Review Request Sidebar
+![Review requests displayed in sidebar with one-click access to PRs](images/sidebar.jpg)
+*Review requests are displayed in a clean sidebar view with priority indicators and author avatars. Click any item to instantly open the PR in your browser.*
+
+### Smart Notifications
+![Notification popup with sound alert for new review requests](images/notice.jpg)
+*Get instant notifications with sound alerts when new review requests arrive. Quick action buttons let you view the PR or open the full list.*
+
+### Status Bar Integration
+![Status bar showing review request count with color coding](images/statusbar.jpg)
+*The status bar displays your pending review count with smart color coding - yellow for normal requests, red for urgent ones (3+ days old).*
 
 ## ⚙️ Configuration
 
