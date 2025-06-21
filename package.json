@@ -1,0 +1,135 @@
+{
+  "name": "github-review-manager",
+  "displayName": "GitHub Review Manager",
+  "description": "Manage GitHub pull request review requests with automatic updates and notifications.",
+  "version": "0.0.1",
+  "publisher": "Sado4",
+  "engines": {
+    "vscode": "^1.84.0"
+  },
+  "categories": [
+    "Other",
+    "SCM Providers"
+  ],
+  "icon": "images/icon.png",
+  "keywords": [
+    "github",
+    "pull request",
+    "review",
+    "monitor",
+    "notification",
+    "automation"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "githubReviewManager.refresh",
+        "title": "Refresh Review Requests",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "githubReviewManager.openPR",
+        "title": "Open PR in Browser"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "githubReviewManager",
+          "title": "GitHub Review Manager",
+          "icon": "$(git-pull-request)"
+        }
+      ]
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "githubReviewRequestsExplorer",
+          "name": "Review Requests",
+          "when": "githubReviewManager.hasRequests"
+        }
+      ],
+      "githubReviewManager": [
+        {
+          "id": "githubReviewRequestsMain",
+          "name": "Review Requests",
+          "visibility": "visible"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "githubReviewManager.refresh",
+          "when": "view == githubReviewRequestsMain || view == githubReviewRequestsExplorer",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "GitHub Review Manager",
+      "properties": {
+        "githubReviewManager.token": {
+          "type": "string",
+          "default": "",
+          "description": "GitHub Personal Access Token for API access",
+          "markdownDescription": "GitHub Personal Access Token with `repo` scope. [Generate token](https://github.com/settings/tokens)"
+        },
+        "githubReviewManager.refreshInterval": {
+          "type": "number",
+          "default": 300,
+          "minimum": 60,
+          "description": "Auto-refresh interval in seconds (default: 300 = 5 minutes, minimum: 60 seconds)"
+        },
+        "githubReviewManager.showNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show notifications for new review requests"
+        },
+        "githubReviewManager.playSound": {
+          "type": "boolean",
+          "default": true,
+          "description": "Play sound when new review requests are received"
+        }
+      }
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sado4/github-review-manager"
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:vscode": "vscode-test",
+    "biome:check": "biome check .",
+    "biome:fix": "biome check --write .",
+    "biome:format": "biome format --write .",
+    "format": "npm run biome:format",
+    "lint": "npm run biome:check"
+  },
+  "dependencies": {
+    "@octokit/rest": "^20.1.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.2",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.84.0",
+    "@vitest/ui": "^3.2.4",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "typescript": "^5.8.2",
+    "vitest": "^3.2.4"
+  }
+}

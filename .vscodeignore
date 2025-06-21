@@ -1,0 +1,19 @@
+# VS Code metadata
+.vscode/
+.vscode-test/
+
+# Build artifacts
+out/test/
+node_modules/
+README.md~
+*.map
+*.ts
+
+# Project configs
+.gitignore
+.yarnrc
+tsconfig.json
+eslint.config.mjs
+
+# Scaffolding
+vsc-extension-quickstart.md
