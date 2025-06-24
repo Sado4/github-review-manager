@@ -1,9 +1,18 @@
 import * as vscode from "vscode";
 import { ReviewRequestProvider } from "./providers/reviewRequestProvider";
-import { getConfig, onConfigChange } from "./services/configService";
+import {
+	clearToken,
+	getConfig,
+	initializeSecretStorage,
+	onConfigChange,
+	setToken,
+} from "./services/configService";
 import type { ReviewRequest } from "./types";
 
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
+	// Initialize secret storage
+	initializeSecretStorage(context);
+
 	const provider = new ReviewRequestProvider();
 
 	// Register tree views for both activity bar and explorer
@@ -32,7 +41,74 @@ export function activate(context: vscode.ExtensionContext): void {
 	const openSettingsCommand = vscode.commands.registerCommand(
 		"githubReviewManager.openSettings",
 		() => {
-			vscode.commands.executeCommand("workbench.action.openSettings", "githubReviewManager.token");
+			vscode.commands.executeCommand("workbench.action.openSettings", "githubReviewManager");
+		},
+	);
+
+	// Token management commands
+	const setTokenCommand = vscode.commands.registerCommand(
+		"githubReviewManager.setToken",
+		async () => {
+			const token = await vscode.window.showInputBox({
+				prompt: "Enter your GitHub Personal Access Token (Classic)",
+				password: true,
+				placeHolder: "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				validateInput: (value) => {
+					if (!value) {
+						return "Token cannot be empty";
+					}
+					if (!value.startsWith("ghp_")) {
+						return "Invalid token format. Please use a Classic Personal Access Token (ghp_...)";
+					}
+					return null;
+				},
+			});
+
+			if (token) {
+				await setToken(token);
+				vscode.window.showInformationMessage("GitHub token has been saved securely.");
+				provider.refresh();
+			}
+		},
+	);
+
+	const clearTokenCommand = vscode.commands.registerCommand(
+		"githubReviewManager.clearToken",
+		async () => {
+			const result = await vscode.window.showWarningMessage(
+				"Are you sure you want to clear the GitHub token?",
+				{ modal: true },
+				"Yes",
+				"No",
+			);
+
+			if (result === "Yes") {
+				await clearToken();
+				vscode.window.showInformationMessage("GitHub token has been cleared.");
+				provider.refresh();
+			}
+		},
+	);
+
+	// Status bar command that shows helpful popup first
+	const setupFromStatusBarCommand = vscode.commands.registerCommand(
+		"githubReviewManager.setupFromStatusBar",
+		async () => {
+			const action = await vscode.window.showInformationMessage(
+				"GitHub Review Manager needs a Classic Personal Access Token with 'repo' scope to access your review requests.",
+				"Generate Token",
+				"I already have a token",
+			);
+
+			if (action === "Generate Token") {
+				vscode.env.openExternal(
+					vscode.Uri.parse(
+						"https://github.com/settings/tokens/new?scopes=repo&description=GitHub%20Review%20Manager",
+					),
+				);
+			} else if (action === "I already have a token") {
+				vscode.commands.executeCommand("githubReviewManager.setToken");
+			}
 		},
 	);
 
@@ -42,7 +118,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	});
 
 	// Set up periodic refresh
-	const config = getConfig();
+	const config = await getConfig();
 	const refreshInterval = config.refreshInterval * 1000;
 
 	const intervalId = setInterval(() => {
@@ -60,6 +136,9 @@ export function activate(context: vscode.ExtensionContext): void {
 		refreshCommand,
 		openPRCommand,
 		openSettingsCommand,
+		setTokenCommand,
+		clearTokenCommand,
+		setupFromStatusBarCommand,
 		configChangeListener,
 		provider,
 		{ dispose: () => clearInterval(intervalId) },

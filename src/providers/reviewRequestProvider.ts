@@ -2,18 +2,22 @@ import * as vscode from "vscode";
 import { getConfig } from "../services/configService";
 import { GitHubService } from "../services/githubService";
 import { NotificationService } from "../services/notificationService";
-import type { ReviewRequest, StatusBarInfo } from "../types";
 
-export class ReviewRequestProvider implements vscode.TreeDataProvider<ReviewRequest> {
-	private _onDidChangeTreeData: vscode.EventEmitter<ReviewRequest | undefined | null | undefined> =
-		new vscode.EventEmitter<ReviewRequest | undefined | null | undefined>();
-	readonly onDidChangeTreeData: vscode.Event<ReviewRequest | undefined | null | undefined> =
+import type { RepositoryNode, ReviewRequest, StatusBarInfo } from "../types";
+
+type TreeItem = ReviewRequest | RepositoryNode;
+
+export class ReviewRequestProvider implements vscode.TreeDataProvider<TreeItem> {
+	private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | undefined | null | undefined> =
+		new vscode.EventEmitter<TreeItem | undefined | null | undefined>();
+	readonly onDidChangeTreeData: vscode.Event<TreeItem | undefined | null | undefined> =
 		this._onDidChangeTreeData.event;
 
 	private reviewRequests: ReviewRequest[] = [];
 	private githubService: GitHubService;
 	private notificationService: NotificationService;
 	private statusBarItem: vscode.StatusBarItem;
+	private repositoryNodes: RepositoryNode[] = [];
 
 	constructor() {
 		this.githubService = new GitHubService();
@@ -23,8 +27,8 @@ export class ReviewRequestProvider implements vscode.TreeDataProvider<ReviewRequ
 		this.initializeServices();
 	}
 
-	private initializeServices(): void {
-		const config = getConfig();
+	private async initializeServices(): Promise<void> {
+		const config = await getConfig();
 		if (config.token) {
 			this.githubService.updateToken(config.token);
 		}
@@ -35,11 +39,33 @@ export class ReviewRequestProvider implements vscode.TreeDataProvider<ReviewRequ
 		this.fetchReviewRequests();
 	}
 
-	getTreeItem(element: ReviewRequest): vscode.TreeItem {
-		// Use updatedAt as a proxy for when review was likely requested
-		// (closer to when you were actually asked to review)
-		const relevantTime =
-			element.updatedAt > element.createdAt ? element.updatedAt : element.createdAt;
+	getTreeItem(element: TreeItem): vscode.TreeItem {
+		// Repository node case
+		if ("reviewRequests" in element) {
+			return this.createRepositoryTreeItem(element);
+		}
+
+		// Review request case
+		return this.createReviewRequestTreeItem(element);
+	}
+
+	private createRepositoryTreeItem(repositoryNode: RepositoryNode): vscode.TreeItem {
+		const item = new vscode.TreeItem(
+			repositoryNode.repository,
+			vscode.TreeItemCollapsibleState.Expanded,
+		);
+
+		const count = repositoryNode.reviewRequests.length;
+		item.description = `${count} review${count !== 1 ? "s" : ""}`;
+		item.tooltip = `${repositoryNode.repository} - ${count} pending review request${count !== 1 ? "s" : ""}`;
+		item.iconPath = new vscode.ThemeIcon("repo");
+		item.contextValue = "repositoryNode";
+
+		return item;
+	}
+
+	private createReviewRequestTreeItem(element: ReviewRequest): vscode.TreeItem {
+		const relevantTime = this.getRelevantTime(element);
 		const timeEmoji = this.getTimeEmoji(relevantTime);
 
 		// Use emoji + title for compact display
@@ -67,17 +93,30 @@ export class ReviewRequestProvider implements vscode.TreeDataProvider<ReviewRequ
 		return item;
 	}
 
-	getChildren(element?: ReviewRequest): Thenable<ReviewRequest[]> {
+	async getChildren(element?: TreeItem): Promise<TreeItem[]> {
 		if (!element) {
-			return Promise.resolve(this.reviewRequests);
+			// Root level - decide whether to group by repository or not
+			const config = await getConfig();
+
+			if (config.groupByRepository) {
+				return this.repositoryNodes;
+			} else {
+				return this.reviewRequests;
+			}
 		}
-		return Promise.resolve([]);
+
+		// Repository node child elements (review requests)
+		if ("reviewRequests" in element) {
+			return element.reviewRequests;
+		}
+
+		// Review requests have no child elements
+		return [];
 	}
 
 	private createTooltip(element: ReviewRequest): vscode.MarkdownString {
 		const tooltip = new vscode.MarkdownString();
-		const relevantTime =
-			element.updatedAt > element.createdAt ? element.updatedAt : element.createdAt;
+		const relevantTime = this.getRelevantTime(element);
 		const timeAgo = this.getTimeAgo(relevantTime);
 		const timeEmoji = this.getTimeEmoji(relevantTime);
 		const createdDate = new Date(element.createdAt).toLocaleDateString();
@@ -164,10 +203,7 @@ export class ReviewRequestProvider implements vscode.TreeDataProvider<ReviewRequ
 	}
 
 	private getTimeEmoji(dateString: string): string {
-		const now = new Date();
-		const created = new Date(dateString);
-		const diffMs = now.getTime() - created.getTime();
-		const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+		const diffDays = this.getDaysFromNow(dateString);
 
 		if (diffDays >= 7) {
 			return "🚨"; // Urgent: 1 week+
@@ -180,18 +216,72 @@ export class ReviewRequestProvider implements vscode.TreeDataProvider<ReviewRequ
 		}
 	}
 
+	private getRelevantTime(element: ReviewRequest): string {
+		return element.updatedAt > element.createdAt ? element.updatedAt : element.createdAt;
+	}
+
+	private getDaysFromNow(dateString: string): number {
+		const now = new Date();
+		const date = new Date(dateString);
+		const diffMs = now.getTime() - date.getTime();
+		return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+	}
+
+	private groupByRepository(requests: ReviewRequest[]): RepositoryNode[] {
+		const repositoryMap = new Map<string, ReviewRequest[]>();
+
+		// Group by repository
+		for (const request of requests) {
+			if (!repositoryMap.has(request.repository)) {
+				repositoryMap.set(request.repository, []);
+			}
+			repositoryMap.get(request.repository)!.push(request);
+		}
+
+		// Create RepositoryNode array and sort by repository name
+		return Array.from(repositoryMap.entries())
+			.map(([repository, reviewRequests]) => ({
+				repository,
+				reviewRequests: reviewRequests.sort((a, b) => {
+					// Sort by urgency (time-based)
+					const timeA = this.getRelevantTime(a);
+					const timeB = this.getRelevantTime(b);
+					return new Date(timeB).getTime() - new Date(timeA).getTime();
+				}),
+			}))
+			.sort((a, b) => a.repository.localeCompare(b.repository));
+	}
+
 	private async fetchReviewRequests(): Promise<void> {
 		if (!this.githubService.isConfigured()) {
 			this.notificationService.showTokenConfigurationError();
-			this.updateStatusBar();
+			await this.updateStatusBar();
 			return;
 		}
 
 		try {
 			const previousIds = new Set(this.reviewRequests.map((r) => r.id));
-			this.reviewRequests = await this.githubService.fetchReviewRequests();
+			let allRequests = await this.githubService.fetchReviewRequests();
 
-			const config = getConfig();
+			const config = await getConfig();
+
+			// Apply repository filter if configured
+			const originalCount = allRequests.length;
+			if (config.repositoryFilter.length > 0) {
+				allRequests = allRequests.filter((request) =>
+					config.repositoryFilter.includes(request.repository),
+				);
+
+				console.log(
+					`GitHub Review Manager: Repository filter applied - showing ${allRequests.length}/${originalCount} requests from repositories: ${config.repositoryFilter.join(", ")}`,
+				);
+			}
+
+			this.reviewRequests = allRequests;
+
+			// Group by repository
+			this.repositoryNodes = this.groupByRepository(allRequests);
+
 			const newRequests = this.reviewRequests.filter((r) => !previousIds.has(r.id));
 
 			if (newRequests.length > 0) {
@@ -209,24 +299,35 @@ export class ReviewRequestProvider implements vscode.TreeDataProvider<ReviewRequ
 				this.reviewRequests.length > 0,
 			);
 			this._onDidChangeTreeData.fire(undefined);
-			this.updateStatusBar();
+			await this.updateStatusBar();
 		} catch (error) {
 			console.error("Error fetching review requests:", error);
 			this.notificationService.showApiError();
-			this.updateStatusBar();
+			await this.updateStatusBar();
 		}
 	}
 
-	private updateStatusBar(): void {
+	private async updateStatusBar(): Promise<void> {
 		const statusInfo = this.getStatusBarInfo();
+		const config = await getConfig();
+		const isFiltered = config.repositoryFilter.length > 0;
 
 		if (statusInfo.total > 0) {
-			// Simple count display
-			this.statusBarItem.text = `$(git-pull-request) ${statusInfo.total}`;
+			// Simple count display with filter indicator
+			const filterText = isFiltered ? " 📁" : "";
+			this.statusBarItem.text = `$(git-pull-request) ${statusInfo.total}${filterText}`;
 			this.statusBarItem.command = "workbench.view.extension.githubReviewManager";
 
-			// Enhanced tooltip with priority breakdown only
-			const tooltipParts = [`${statusInfo.total} review requests pending`];
+			// Enhanced tooltip with filter info
+			const tooltipParts = [];
+
+			if (isFiltered) {
+				tooltipParts.push(`🔍 Filtered: ${statusInfo.total} review requests`);
+				tooltipParts.push(`📁 Repositories: ${config.repositoryFilter.join(", ")}`);
+				tooltipParts.push("");
+			} else {
+				tooltipParts.push(`${statusInfo.total} review requests pending`);
+			}
 
 			// Add urgency breakdown
 			if (statusInfo.urgent > 0) {
@@ -240,6 +341,13 @@ export class ReviewRequestProvider implements vscode.TreeDataProvider<ReviewRequ
 			}
 			if (statusInfo.new > 0) {
 				tooltipParts.push(`🆕 New: ${statusInfo.new} (today)`);
+			}
+
+			if (isFiltered) {
+				tooltipParts.push(
+					"",
+					"💡 Tip: Go to Settings > GitHub Review Manager > Repository Filter to modify",
+				);
 			}
 
 			tooltipParts.push("", "Click to open review list");
@@ -259,56 +367,65 @@ export class ReviewRequestProvider implements vscode.TreeDataProvider<ReviewRequ
 
 			this.statusBarItem.show();
 		} else if (this.githubService.isConfigured()) {
-			this.statusBarItem.text = `$(git-pull-request) 0`;
-			this.statusBarItem.tooltip =
-				"No pending review requests\nClick to refresh or open review list";
+			const filterText = isFiltered ? " 📁" : "";
+			this.statusBarItem.text = `$(git-pull-request) 0${filterText}`;
+
+			let tooltip = "No pending review requests\nClick to refresh or open review list";
+			if (isFiltered) {
+				tooltip = `🔍 No pending review requests in filtered repositories\n📁 Filtering: ${config.repositoryFilter.join(", ")}\n\n💡 Tip: Go to Settings > GitHub Review Manager > Repository Filter to modify\n\nClick to refresh or open review list`;
+			}
+
+			this.statusBarItem.tooltip = tooltip;
 			this.statusBarItem.command = "workbench.view.extension.githubReviewManager";
 			this.statusBarItem.backgroundColor = undefined;
 			this.statusBarItem.show();
 		} else {
 			this.statusBarItem.text = `$(git-pull-request) Not configured`;
-			this.statusBarItem.tooltip =
-				"GitHub Personal Access Token not configured.\nClick to set up 'repo' scope token to view review requests.";
-			this.statusBarItem.command = "githubReviewManager.openSettings";
+			this.statusBarItem.tooltip = [
+				"GitHub Review Manager - Token Required",
+				"",
+				"📋 To get started:",
+				"1. Click here to show setup options",
+				"2. Choose 'Generate Token' to create a new one",
+				"3. Generate a Classic token with 'repo' scope",
+				"4. Come back and choose 'I already have a token'",
+				"5. Paste your token when prompted",
+				"",
+				"💡 Classic tokens work with ALL repositories",
+				"   (personal, organizations, private repos)",
+				"",
+				"🔄 Lost the popup? Reload VS Code or click here again",
+			].join("\n");
+			this.statusBarItem.command = "githubReviewManager.setupFromStatusBar";
 			this.statusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.errorBackground");
 			this.statusBarItem.show();
 		}
 	}
 
 	private getStatusBarInfo(): StatusBarInfo {
-		const now = new Date();
-
 		// Calculate urgency levels
 		const urgentRequests = this.reviewRequests.filter((r) => {
-			const relevantTime = r.updatedAt > r.createdAt ? r.updatedAt : r.createdAt;
-			const diffDays = Math.floor(
-				(now.getTime() - new Date(relevantTime).getTime()) / (1000 * 60 * 60 * 24),
-			);
+			const relevantTime = this.getRelevantTime(r);
+			const diffDays = this.getDaysFromNow(relevantTime);
 			return diffDays >= 7; // 1+ week
 		});
 
 		const highRequests = this.reviewRequests.filter((r) => {
-			const relevantTime = r.updatedAt > r.createdAt ? r.updatedAt : r.createdAt;
-			const diffDays = Math.floor(
-				(now.getTime() - new Date(relevantTime).getTime()) / (1000 * 60 * 60 * 24),
-			);
+			const relevantTime = this.getRelevantTime(r);
+			const diffDays = this.getDaysFromNow(relevantTime);
 			return diffDays >= 3 && diffDays < 7; // 3-6 days
 		});
 
 		const mediumRequests = this.reviewRequests.filter((r) => {
-			const relevantTime = r.updatedAt > r.createdAt ? r.updatedAt : r.createdAt;
-			const diffDays = Math.floor(
-				(now.getTime() - new Date(relevantTime).getTime()) / (1000 * 60 * 60 * 24),
-			);
+			const relevantTime = this.getRelevantTime(r);
+			const diffDays = this.getDaysFromNow(relevantTime);
 			return diffDays >= 1 && diffDays < 3; // 1-2 days
 		});
 
 		const newRequests = this.reviewRequests.filter((r) => {
-			const relevantTime = r.updatedAt > r.createdAt ? r.updatedAt : r.createdAt;
-			const diffDays = Math.floor(
-				(now.getTime() - new Date(relevantTime).getTime()) / (1000 * 60 * 60 * 24),
-			);
-			return diffDays < 1; // today
+			const relevantTime = this.getRelevantTime(r);
+			const diffDays = this.getDaysFromNow(relevantTime);
+			return diffDays < 1; // Same day
 		});
 
 		return {

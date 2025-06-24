@@ -36,15 +36,50 @@ The extension uses intelligent emoji indicators to show review urgency at a glan
 - `[Draft]` - Pull request is still in draft mode
 - `[⚡]` - Merge conflicts detected
 
+## 🔑 Why Classic Tokens?
+
+This extension is designed for **multi-repository review management** and works best with **Classic Personal Access Tokens**:
+
+### ✅ **Classic Token Advantages**
+- **🌍 Universal Access**: One token accesses ALL your repositories (personal, organizations, private)
+- **🚀 Zero Configuration**: Just select `repo` scope - no manual repository selection needed
+- **🏢 Multi-Organization**: Seamlessly works across all organizations you belong to
+- **⚡ Simple Setup**: Generate once, use everywhere
+
+### ❌ **Fine-grained Token Limitations**  
+- **📍 Single Target**: Each token works for only ONE organization or personal account
+- **📝 Manual Selection**: Must individually select every repository you want access to
+- **🔄 Multiple Tokens**: Need separate tokens for each organization
+- **🔮 Prediction Required**: Must anticipate which repositories you'll review in
+
+**Bottom Line**: Review requests come from anywhere in your GitHub ecosystem. Classic tokens ensure you never miss a review request from any repository you have access to.
+
 ## 🚀 Quick Start
 
 1. **Install the extension** from the VS Code Marketplace
 2. **Configure your GitHub token**:
-   - Open VS Code settings (`Ctrl/Cmd + ,`)
-   - Search for "GitHub Review Manager"
-   - Set your GitHub Personal Access Token with `repo` scope
-   - [Generate a token here](https://github.com/settings/tokens)
+   - Click the 🔑 "Set Token" button in the GitHub Review Manager view
+   - Generate a **Classic Personal Access Token** with `repo` scope:
+     - **Advantage**: Access to ALL repositories (personal, organization, private) with a single token
+     - **Simplicity**: No need to select individual repositories
+     - **Multi-organization support**: Works across all organizations you have access to
+   - [Generate a Classic token here](https://github.com/settings/tokens/new?scopes=repo&description=GitHub%20Review%20Manager)
 3. **View your review requests** in the Activity Bar or Explorer sidebar
+
+### Token Comparison
+
+| Feature | Classic Token (Recommended) | Fine-grained Token |
+|---------|----------------------------|-------------------|
+| **Repository Access** | ✅ ALL repositories (personal + organizations) | ❌ Must select each repository individually |
+| **Multi-organization** | ✅ Access across all organizations | ❌ One organization per token |
+| **Setup Complexity** | ✅ Simple - just select `repo` scope | ❌ Complex - manual repository selection |
+| **Use Case** | ✅ Perfect for review managers | ❌ Better for specific project access |
+| **Token Management** | ✅ One token for everything | ❌ Multiple tokens needed |
+
+**Why Classic tokens work better for review management:**
+- Review requests come from various repositories across different organizations
+- Fine-grained tokens require you to predict and pre-select every repository
+- Classic tokens with `repo` scope provide seamless access to all your reviewable content
 
 ## 📸 Screenshots
 
@@ -64,10 +99,50 @@ The extension uses intelligent emoji indicators to show review urgency at a glan
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `githubReviewManager.token` | GitHub Personal Access Token (requires `repo` scope) | `""` |
+| Token | Classic Personal Access Token with `repo` scope (recommended for full repository access) | Use "Set Token" button |
 | `githubReviewManager.refreshInterval` | Auto-refresh interval in seconds | `300` (5 minutes) |
 | `githubReviewManager.showNotifications` | Show notifications for new review requests | `true` |
 | `githubReviewManager.playSound` | Play sound when new review requests arrive | `true` |
+| `githubReviewManager.groupByRepository` | Group review requests by repository in tree view | `true` |
+| `githubReviewManager.repositoryFilter` | **🔍 Filter to specific repositories only** - Show review requests only from specified repositories (e.g., `["mycompany/web-app", "personal/project"]`). Leave empty to show all repositories. | `[]` |
+
+### 🔍 Repository Filter Examples
+
+The `repositoryFilter` setting allows you to focus on specific repositories. Here are common use cases:
+
+#### Focus on work projects only:
+```json
+{
+  "githubReviewManager.repositoryFilter": [
+    "mycompany/frontend",
+    "mycompany/backend",
+    "mycompany/mobile-app"
+  ]
+}
+```
+
+#### Monitor personal projects:
+```json
+{
+  "githubReviewManager.repositoryFilter": [
+    "myusername/personal-blog",
+    "myusername/side-project"
+  ]
+}
+```
+
+#### Mixed work and personal:
+```json
+{
+  "githubReviewManager.repositoryFilter": [
+    "company/main-app",
+    "opensource/library",
+    "personal/portfolio"
+  ]
+}
+```
+
+**💡 Quick Setup**: Go to VS Code Settings (`Cmd+,`) → Search "GitHub Review Manager" → "Repository Filter" and add your repositories one by one!
 
 ## 🎯 How It Works
 
@@ -143,14 +218,14 @@ Clean and intuitive status indicator:
 
 ## 🔐 Privacy & Security
 
-- Your GitHub token is stored securely in VS Code's configuration
+- Your GitHub token is stored securely in VS Code's Secret Storage (encrypted)
 - All API requests are made directly to GitHub - no third-party servers involved
 - The extension only accesses pull requests where you're specifically requested as a reviewer
 
 ## 🐛 Troubleshooting
 
 ### "GitHub token not configured" error
-Make sure you've set a valid GitHub Personal Access Token in the extension settings with `repo` scope.
+Click the 🔑 "Set Token" button and enter a Classic Personal Access Token with `repo` scope for full repository access.
 
 ### No review requests showing
 - Verify your token has the correct permissions

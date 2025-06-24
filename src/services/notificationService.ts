@@ -57,15 +57,14 @@ export class NotificationService {
 
 	showTokenConfigurationError(): void {
 		const message =
-			"GitHub token not configured. Please set a Personal Access Token with 'repo' scope.";
-		vscode.window.showErrorMessage(message, "Open Settings", "Generate Token").then((selection) => {
-			if (selection === "Open Settings") {
-				vscode.commands.executeCommand(
-					"workbench.action.openSettings",
-					"githubReviewManager.token",
+			"GitHub token not configured. Generate a Classic Personal Access Token with 'repo' scope for full repository access.";
+		vscode.window.showErrorMessage(message, "Generate Token").then((selection) => {
+			if (selection === "Generate Token") {
+				vscode.env.openExternal(
+					vscode.Uri.parse(
+						"https://github.com/settings/tokens/new?scopes=repo&description=GitHub%20Review%20Manager",
+					),
 				);
-			} else if (selection === "Generate Token") {
-				vscode.env.openExternal(vscode.Uri.parse("https://github.com/settings/tokens"));
 			}
 		});
 	}

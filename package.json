@@ -2,7 +2,7 @@
   "name": "github-review-manager",
   "displayName": "GitHub Review Manager",
   "description": "Manage GitHub pull request review requests with automatic updates and notifications.",
-  "version": "0.0.21",
+  "version": "0.0.3",
   "publisher": "Sado4",
   "engines": {
     "vscode": "^1.84.0"
@@ -34,6 +34,20 @@
       {
         "command": "githubReviewManager.openPR",
         "title": "Open PR in Browser"
+      },
+      {
+        "command": "githubReviewManager.setToken",
+        "title": "Set GitHub Token",
+        "icon": "$(key)"
+      },
+      {
+        "command": "githubReviewManager.clearToken",
+        "title": "Clear GitHub Token",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "githubReviewManager.setupFromStatusBar",
+        "title": "Setup GitHub Token from Status Bar"
       }
     ],
     "viewsContainers": {
@@ -66,36 +80,57 @@
         {
           "command": "githubReviewManager.refresh",
           "when": "view == githubReviewRequestsMain || view == githubReviewRequestsExplorer",
-          "group": "navigation"
+          "group": "navigation@1"
+        },
+        {
+          "command": "githubReviewManager.setToken",
+          "when": "view == githubReviewRequestsMain || view == githubReviewRequestsExplorer",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "githubReviewManager.clearToken",
+          "when": "view == githubReviewRequestsMain || view == githubReviewRequestsExplorer",
+          "group": "token@1"
         }
       ]
     },
     "configuration": {
       "title": "GitHub Review Manager",
       "properties": {
-        "githubReviewManager.token": {
-          "type": "string",
-          "default": "",
-          "description": "GitHub Personal Access Token for API access",
-          "markdownDescription": "GitHub Personal Access Token with `repo` scope. [Generate token](https://github.com/settings/tokens)"
-        },
-        "githubReviewManager.refreshInterval": {
-          "type": "number",
-          "default": 300,
-          "minimum": 60,
-          "description": "Auto-refresh interval in seconds (default: 300 = 5 minutes, minimum: 60 seconds)"
-        },
-        "githubReviewManager.showNotifications": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show notifications for new review requests"
-        },
-        "githubReviewManager.playSound": {
-          "type": "boolean",
-          "default": true,
-          "description": "Play sound when new review requests are received"
+          "githubReviewManager.refreshInterval": {
+            "type": "number",
+            "default": 300,
+            "minimum": 60,
+            "description": "Auto-refresh interval in seconds (default: 300 = 5 minutes, minimum: 60 seconds)"
+          },
+          "githubReviewManager.showNotifications": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show notifications for new review requests"
+          },
+          "githubReviewManager.playSound": {
+            "type": "boolean",
+            "default": true,
+            "description": "Play sound when new review requests are received"
+          },
+          "githubReviewManager.groupByRepository": {
+            "type": "boolean",
+            "default": true,
+            "description": "Group review requests by repository"
+          },
+          "githubReviewManager.repositoryFilter": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$",
+              "patternErrorMessage": "Please use format: owner/repository-name (e.g., 'mycompany/web-app')"
+            },
+            "default": [],
+            "markdownDescription": "**Filter to specific repositories only** 📁\n\nShow review requests only from these repositories:\n- **Format**: `owner/repository-name`\n- **Example**: `[\"mycompany/web-app\", \"myusername/personal-project\"]`\n- **Leave empty** to show **all repositories**\n\n💡 **Quick tip**: Copy repository names directly from GitHub URLs!\n\n✅ **Valid examples**:\n- `github/docs`\n- `microsoft/vscode`\n- `my-company/api-server`\n\n❌ **Invalid formats**:\n- `just-repository-name` (missing owner)\n- `https://github.com/owner/repo` (full URL not needed)\n- `owner/repo/subfolder` (too many slashes)"
+          }
         }
-      }
     }
   },
   "repository": {

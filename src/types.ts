@@ -15,11 +15,13 @@ export interface ReviewRequest {
 	reviewComments: number;
 }
 
-export interface GitHubConfig {
+export interface Config {
 	token: string;
 	refreshInterval: number;
 	showNotifications: boolean;
 	playSound: boolean;
+	groupByRepository: boolean;
+	repositoryFilter: string[];
 }
 
 export interface NotificationOptions {
@@ -34,4 +36,9 @@ export interface StatusBarInfo {
 	high: number; // 3+ days old
 	medium: number; // 1+ days old
 	new: number; // today
+}
+
+export interface RepositoryNode {
+	repository: string;
+	reviewRequests: ReviewRequest[];
 }
