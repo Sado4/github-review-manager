@@ -184,10 +184,15 @@ Hover over any review request to see comprehensive details:
 - Shows both relative time ("2d ago") and exact timestamps
 - Automatically removes completed reviews from the list
 
-## 🔧 Commands
+## 🔧 Commands & UI
 
-- `GitHub Review Manager: Refresh Review Requests` - Manually refresh the list
-- `GitHub Review Manager: Open PR in Browser` - Open selected PR in your default browser
+### Toolbar Actions
+- 🔄 **Refresh Review Requests** - Manually refresh the list
+- 🔑 **Set GitHub Token** - Securely configure your GitHub access token
+- 🗑️ **Clear GitHub Token** - Remove stored token from secure storage
+
+### Context Actions
+- 🌐 **Open PR in Browser** - Open selected PR in your default browser
 
 ## 🎨 UI Components
 

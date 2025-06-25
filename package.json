@@ -2,7 +2,7 @@
   "name": "github-review-manager",
   "displayName": "GitHub Review Manager",
   "description": "Manage GitHub pull request review requests with automatic updates and notifications.",
-  "version": "0.0.31",
+  "version": "0.0.32",
   "publisher": "Sado4",
   "engines": {
     "vscode": "^1.84.0"
@@ -86,13 +86,11 @@
           "command": "githubReviewManager.setToken",
           "when": "view == githubReviewRequestsMain || view == githubReviewRequestsExplorer",
           "group": "navigation@2"
-        }
-      ],
-      "view/item/context": [
+        },
         {
           "command": "githubReviewManager.clearToken",
           "when": "view == githubReviewRequestsMain || view == githubReviewRequestsExplorer",
-          "group": "token@1"
+          "group": "navigation@3"
         }
       ]
     },

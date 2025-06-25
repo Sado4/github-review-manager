@@ -2,6 +2,18 @@
 
 All notable changes to the "github-review-manager" extension will be documented in this file.
 
+## [0.0.32] - 2025-01-02
+
+### 🎨 Improved - User Interface
+- **Enhanced Token Management UI**: Moved "Clear GitHub Token" from right-click context menu to title bar icons
+  - Both "Set GitHub Token" 🔑 and "Clear GitHub Token" 🗑️ are now easily accessible as toolbar icons
+  - Improved user experience with more intuitive token management workflow
+  - Eliminated confusion from having token management actions in item context menus
+
+### 🔧 Technical
+- **Menu Structure Optimization**: Streamlined menu configuration for better UI consistency
+- **Better Command Organization**: Token management commands now properly grouped in navigation toolbar
+
 ## [0.0.3] - 2025-06-25
 
 ### 🎉 Update: Enhanced Security & Repository Management
