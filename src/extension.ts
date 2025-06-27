@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { ReviewRequestProvider } from "./providers/reviewRequestProvider";
+import { AIReviewService } from "./services/aiReviewService";
 import {
 	clearToken,
 	getConfig,
@@ -14,6 +15,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	initializeSecretStorage(context);
 
 	const provider = new ReviewRequestProvider();
+	const aiReviewService = new AIReviewService();
 
 	// Register tree views for both activity bar and explorer
 	const treeViewMain = vscode.window.createTreeView("githubReviewRequestsMain", {
@@ -90,6 +92,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		},
 	);
 
+	// AI Review command
+	const requestAIReviewCommand = vscode.commands.registerCommand(
+		"githubReviewManager.requestAIReview",
+		async (reviewRequest: ReviewRequest) => {
+			await aiReviewService.requestAIReview(reviewRequest);
+		},
+	);
+
 	// Status bar command that shows helpful popup first
 	const setupFromStatusBarCommand = vscode.commands.registerCommand(
 		"githubReviewManager.setupFromStatusBar",
@@ -138,6 +148,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		openSettingsCommand,
 		setTokenCommand,
 		clearTokenCommand,
+		requestAIReviewCommand,
 		setupFromStatusBarCommand,
 		configChangeListener,
 		provider,

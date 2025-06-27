@@ -91,4 +91,47 @@ export class GitHubService {
 			throw error;
 		}
 	}
+
+	async fetchPRDiff(reviewRequest: ReviewRequest): Promise<string> {
+		if (!this.octokit) {
+			throw new Error("GitHub token not configured");
+		}
+
+		try {
+			const [owner, repo] = reviewRequest.repository.split("/");
+			const { data: prDiff } = await this.octokit.rest.pulls.get({
+				owner,
+				repo,
+				pull_number: reviewRequest.id,
+				mediaType: {
+					format: "diff",
+				},
+			});
+
+			return prDiff as unknown as string;
+		} catch (error) {
+			console.error(`Error fetching diff for PR #${reviewRequest.id}:`, error);
+			throw error;
+		}
+	}
+
+	async fetchPRDescription(reviewRequest: ReviewRequest): Promise<string> {
+		if (!this.octokit) {
+			throw new Error("GitHub token not configured");
+		}
+
+		try {
+			const [owner, repo] = reviewRequest.repository.split("/");
+			const { data: prDetail } = await this.octokit.rest.pulls.get({
+				owner,
+				repo,
+				pull_number: reviewRequest.id,
+			});
+
+			return prDetail.body || "";
+		} catch (error) {
+			console.error(`Error fetching description for PR #${reviewRequest.id}:`, error);
+			throw error;
+		}
+	}
 }

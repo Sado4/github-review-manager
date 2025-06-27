@@ -2,7 +2,7 @@
   "name": "github-review-manager",
   "displayName": "GitHub Review Manager",
   "description": "Manage GitHub pull request review requests with automatic updates and notifications.",
-  "version": "0.0.32",
+  "version": "0.0.40",
   "publisher": "Sado4",
   "engines": {
     "vscode": "^1.84.0"
@@ -48,6 +48,11 @@
       {
         "command": "githubReviewManager.setupFromStatusBar",
         "title": "Setup GitHub Token from Status Bar"
+      },
+      {
+        "command": "githubReviewManager.requestAIReview",
+        "title": "Request AI Review",
+        "icon": "$(robot)"
       }
     ],
     "viewsContainers": {
@@ -92,6 +97,13 @@
           "when": "view == githubReviewRequestsMain || view == githubReviewRequestsExplorer",
           "group": "navigation@3"
         }
+      ],
+      "view/item/context": [
+        {
+          "command": "githubReviewManager.requestAIReview",
+          "when": "view == githubReviewRequestsMain && viewItem == reviewRequest || view == githubReviewRequestsExplorer && viewItem == reviewRequest",
+          "group": "aiReview@1"
+        }
       ]
     },
     "configuration": {
@@ -127,6 +139,18 @@
             },
             "default": [],
             "markdownDescription": "**Filter to specific repositories only** 📁\n\nShow review requests only from these repositories:\n- **Format**: `owner/repository-name`\n- **Example**: `[\"mycompany/web-app\", \"myusername/personal-project\"]`\n- **Leave empty** to show **all repositories**\n\n💡 **Quick tip**: Copy repository names directly from GitHub URLs!\n\n✅ **Valid examples**:\n- `github/docs`\n- `microsoft/vscode`\n- `my-company/api-server`\n\n❌ **Invalid formats**:\n- `just-repository-name` (missing owner)\n- `https://github.com/owner/repo` (full URL not needed)\n- `owner/repo/subfolder` (too many slashes)"
+          },
+          "githubReviewManager.aiReview.retentionDays": {
+            "type": "number",
+            "default": 30,
+            "minimum": 1,
+            "maximum": 365,
+            "description": "Number of days to keep AI review files (default: 30 days)"
+          },
+          "githubReviewManager.aiReview.autoCleanup": {
+            "type": "boolean",
+            "default": true,
+            "description": "Automatically delete old AI review files based on retention period"
           }
         }
     }

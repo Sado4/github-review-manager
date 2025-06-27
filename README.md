@@ -16,6 +16,8 @@ A Visual Studio Code extension that helps you monitor and manage GitHub pull req
 - **📱 Compact Design** - Optimized for narrow sidebars with essential information
 - **🔄 Auto-refresh** - Configurable update intervals (minimum 60 seconds)
 - **📍 Multi-view Support** - Available in both Activity Bar and Explorer sidebar
+- **🤖 AI Review Integration** - Right-click PR items to request comprehensive AI code reviews
+- **🛡️ Safe File Management** - Automatic cleanup with bulletproof safety for generated review files
 
 ## 🎨 Visual Priority System
 
@@ -105,6 +107,8 @@ This extension is designed for **multi-repository review management** and works 
 | `githubReviewManager.playSound` | Play sound when new review requests arrive | `true` |
 | `githubReviewManager.groupByRepository` | Group review requests by repository in tree view | `true` |
 | `githubReviewManager.repositoryFilter` | **🔍 Filter to specific repositories only** - Show review requests only from specified repositories (e.g., `["mycompany/web-app", "personal/project"]`). Leave empty to show all repositories. | `[]` |
+| `githubReviewManager.aiReview.retentionDays` | **🗃️ AI Review File Retention** - Number of days to keep AI review files before automatic cleanup | `30` |
+| `githubReviewManager.aiReview.autoCleanup` | **🛡️ Safe Auto-cleanup** - Automatically delete old AI review files with bulletproof safety validation | `true` |
 
 ### 🔍 Repository Filter Examples
 
@@ -143,6 +147,103 @@ The `repositoryFilter` setting allows you to focus on specific repositories. Her
 ```
 
 **💡 Quick Setup**: Go to VS Code Settings (`Cmd+,`) → Search "GitHub Review Manager" → "Repository Filter" and add your repositories one by one!
+
+## 🤖 AI Review Feature
+
+### Overview
+Request comprehensive AI code reviews for any pull request directly from VS Code. The extension integrates with Claude Code to provide intelligent, context-aware code analysis.
+
+### How to Use
+1. **Right-click** on any PR item in the GitHub Review Manager
+2. **Select "Request AI Review"** from the context menu
+3. **Choose your method**:
+   - **🔧 Claude Code CLI**: Automatically execute if you have Claude CLI installed
+   - **📋 Copy to Clipboard**: Copy the review prompt to paste into Claude Code (recommended)
+
+### What's Included in AI Reviews
+The extension automatically gathers and formats:
+
+- **📋 PR Information**: Title, repository, author, status, and statistics
+- **📝 PR Description**: Complete description and context from GitHub
+- **🔍 Code Changes**: Full diff showing all modifications
+- **📐 Project Rules**: Automatically detects and includes project guidelines from:
+  - `.cursor/rules/rules.md`
+  - `.cursor/rules.md` 
+  - `CLAUDE.md`
+  - `CODING_GUIDELINES.md`
+  - `DEVELOPMENT.md`
+  - `CONTRIBUTING.md`
+
+### Language Detection
+The extension intelligently detects the primary language used in PR titles and descriptions:
+- **🇯🇵 Japanese**: Generates review prompts in Japanese with appropriate context
+- **🇺🇸 English**: Uses English prompts for international projects
+- **🧠 Smart Detection**: Uses character analysis and linguistic patterns for accuracy
+
+### Review Output Options
+
+#### 📋 Clipboard Method (Recommended)
+- Copies formatted review prompt to your clipboard
+- Paste directly into Claude Code for instant review
+- No file management needed - just copy and paste!
+
+#### 🔧 CLI Method
+- Automatically executes `claude` command if available
+- Saves review results to `reviews/` folder
+- Organized with timestamps: `PR-{repo}-{number}-{timestamp}.md`
+
+### File Management & Safety
+
+#### 🗃️ Automatic Organization
+- Reviews saved in `reviews/` folder (workspace or temp directory)
+- Clear naming: `PR-owner-repo-123-2025-06-27T18-03-07.md`
+- Rich markdown formatting with tables and sections
+
+#### 🛡️ Safe Auto-cleanup
+- **Bulletproof Safety**: Only deletes extension-generated files
+- **Strict Pattern Matching**: Uses regex validation `^PR-.+-\d+-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.md$`
+- **Configurable Retention**: Default 30 days, adjustable 1-365 days
+- **User Protection**: Impossible to accidentally delete your other files
+
+#### ⚙️ Configuration
+```json
+{
+  "githubReviewManager.aiReview.retentionDays": 30,
+  "githubReviewManager.aiReview.autoCleanup": true
+}
+```
+
+### Example Review Output Structure
+
+```markdown
+# AI Code Review: Fix authentication bug
+
+## PR Information
+| Field | Value |
+|-------|-------|
+| Repository | mycompany/webapp |
+| PR Number | #123 |
+| Author | developer-name |
+| Status | Ready for Review |
+
+## Change Statistics
+| Metric | Count |
+|--------|-------|
+| Files Changed | 5 |
+| Lines Added | +45 |
+| Lines Deleted | -12 |
+
+---
+
+[AI Review Content with comprehensive analysis]
+```
+
+### Integration Benefits
+- **🎯 Context-Aware**: Includes project-specific rules and guidelines
+- **🌍 Multi-language**: Supports both Japanese and English workflows
+- **⚡ Efficient**: One-click from PR list to comprehensive review
+- **🔒 Safe**: Bulletproof file management with no risk to your files
+- **📱 Flexible**: Choose between automatic CLI or manual copy-paste workflows
 
 ## 🎯 How It Works
 
@@ -193,6 +294,7 @@ Hover over any review request to see comprehensive details:
 
 ### Context Actions
 - 🌐 **Open PR in Browser** - Open selected PR in your default browser
+- 🤖 **Request AI Review** - Generate comprehensive AI code reviews for pull requests
 
 ## 🎨 UI Components
 
@@ -224,8 +326,9 @@ Clean and intuitive status indicator:
 ## 🔐 Privacy & Security
 
 - Your GitHub token is stored securely in VS Code's Secret Storage (encrypted)
-- All API requests are made directly to GitHub - no third-party servers involved
+- All API requests are made directly to GitHub - no third-party servers involved  
 - The extension only accesses pull requests where you're specifically requested as a reviewer
+- AI review files are safely managed with bulletproof deletion patterns - only extension-generated files are affected by auto-cleanup
 
 ## 🐛 Troubleshooting
 

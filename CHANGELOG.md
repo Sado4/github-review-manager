@@ -2,6 +2,47 @@
 
 All notable changes to the "github-review-manager" extension will be documented in this file.
 
+## [0.0.40] - 2025-06-27
+
+### 🤖 Major Feature - AI Review Integration
+
+- **AI Code Review Feature**: Comprehensive AI-powered code review integration with Claude Code
+  - Right-click any PR item to request detailed AI code reviews
+  - Automatic context gathering: PR info, description, diff, and project rules
+  - Smart project rules detection from `.cursor/rules/`, `CLAUDE.md`, `CONTRIBUTING.md`, etc.
+  - Intelligent language detection for Japanese/English review output
+
+### 🎯 Review Methods
+
+- **📋 Clipboard Integration (Recommended)**: Copy formatted review prompts to clipboard for direct pasting into Claude Code
+- **🔧 CLI Integration**: Automatic execution via `claude` command if installed locally
+- **📱 Flexible Workflow**: Choose the method that fits your development environment
+
+### 🌍 Multi-language Support
+
+- **Japanese Language Detection**: Automatic detection of Japanese PR content with localized review prompts
+- **English Language Support**: International project support with English review templates
+- **Smart Context Switching**: Detects language from PR titles and descriptions using character analysis
+
+### 📁 File Management
+
+- **Organized Storage**: Reviews saved in `reviews/` folder with clear naming: `PR-{repo}-{number}-{timestamp}.md`
+- **Rich Formatting**: Structured markdown output with tables, sections, and comprehensive PR statistics
+- **Auto-cleanup**: Configurable retention period (default 30 days) with bulletproof safety validation
+
+### ⚙️ Configuration Options
+
+- **Retention Control**: `githubReviewManager.aiReview.retentionDays` (1-365 days)
+- **Auto-cleanup Toggle**: `githubReviewManager.aiReview.autoCleanup` (enabled by default)
+- **Safety Validation**: Strict pattern matching ensures only extension-generated files are managed
+
+### 🔄 Integration Benefits
+
+- **Context-Aware Reviews**: Includes project-specific rules and guidelines automatically
+- **One-Click Workflow**: From PR list to comprehensive AI review in seconds
+- **Safe File Handling**: Bulletproof cleanup with regex validation prevents accidental deletions
+- **Developer-Friendly**: Works seamlessly with existing Claude Code workflows
+
 ## [0.0.32] - 2025-06-25
 
 ### 🎨 Improved - User Interface
