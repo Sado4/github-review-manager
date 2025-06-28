@@ -99,19 +99,61 @@ export class GitHubService {
 
 		try {
 			const [owner, repo] = reviewRequest.repository.split("/");
-			const { data: prDiff } = await this.octokit.rest.pulls.get({
+
+			// Get PR details to get base and head SHA
+			const { data: prDetail } = await this.octokit.rest.pulls.get({
 				owner,
 				repo,
 				pull_number: reviewRequest.id,
+			});
+
+			// Get commits to filter out merge commits
+			const { data: commits } = await this.octokit.rest.pulls.listCommits({
+				owner,
+				repo,
+				pull_number: reviewRequest.id,
+			});
+
+			// Filter out merge commits (commits with more than 1 parent)
+			const nonMergeCommits = commits.filter((commit) => commit.parents.length <= 1);
+
+			if (nonMergeCommits.length === 0) {
+				return "No non-merge commits found in this PR.";
+			}
+
+			// Get diff from base to last non-merge commit
+			const lastCommitSha = nonMergeCommits[nonMergeCommits.length - 1].sha;
+			const { data: diff } = await this.octokit.rest.repos.compareCommits({
+				owner,
+				repo,
+				base: prDetail.base.sha,
+				head: lastCommitSha,
 				mediaType: {
 					format: "diff",
 				},
 			});
 
-			return prDiff as unknown as string;
+			return diff as unknown as string;
 		} catch (error) {
 			console.error(`Error fetching diff for PR #${reviewRequest.id}:`, error);
-			throw error;
+			// Fallback to original method if comparison fails
+			try {
+				const [owner, repo] = reviewRequest.repository.split("/");
+				const { data: prDiff } = await this.octokit.rest.pulls.get({
+					owner,
+					repo,
+					pull_number: reviewRequest.id,
+					mediaType: {
+						format: "diff",
+					},
+				});
+				return prDiff as unknown as string;
+			} catch (fallbackError) {
+				console.error(`Fallback method also failed for PR #${reviewRequest.id}:`, fallbackError);
+				throw new Error(
+					`Failed to fetch PR diff: ${error instanceof Error ? error.message : String(error)}. Fallback also failed: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`,
+				);
+			}
 		}
 	}
 

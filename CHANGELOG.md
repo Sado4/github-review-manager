@@ -2,6 +2,45 @@
 
 All notable changes to the "github-review-manager" extension will be documented in this file.
 
+## [0.0.41] - 2025-06-28
+
+### 🔧 Major Improvements - AI Review Enhancement
+
+#### 🎯 **Smart Merge Commit Filtering**
+- **Enhanced Diff Generation**: Automatically filters out merge commits to focus on actual code changes
+- **Universal Base Branch Support**: Works correctly with any base branch (main, develop, feature branches)
+- **Clean Code Review**: Eliminates noise from branch synchronization commits
+- **Fallback Mechanism**: Graceful fallback to original method if filtering fails
+
+#### 📝 **Improved User Experience**
+- **Better Command Naming**: Changed "Request AI Review" → "Generate AI Review Prompt"
+- **Universal AI Tool Support**: Updated messaging to work with any AI tool (Claude, ChatGPT, Gemini, etc.)
+- **Clearer Instructions**: "Paste it into your preferred AI tool for review"
+- **Simplified Workflow**: Removed progress bars and complex dialogs for streamlined experience
+
+#### 🧹 **Code Cleanup & Optimization**
+- **Removed Unused Features**: Eliminated project rules detection that was reading from wrong workspace
+- **Streamlined Prompts**: Cleaner, more focused review prompts without irrelevant context
+- **Better Error Messages**: More descriptive error messages for troubleshooting
+- **Simplified Architecture**: Removed complex CLI integration for more reliable clipboard-only approach
+
+#### 🎨 **UI/UX Improvements**
+- **Context Menu**: Updated right-click menu text for clarity
+- **Notification Messages**: Better wording for cross-platform AI tool compatibility
+- **User Guidance**: Clear instructions on what to do with generated prompts
+
+### 🔄 **Technical Changes**
+- **GitHub API Integration**: Enhanced commit filtering using GitHub REST API
+- **Diff Comparison**: Smart diff generation between base branch and non-merge commits
+- **Error Handling**: Improved error handling with fallback mechanisms
+- **Performance**: Reduced complexity by removing unused file management features
+
+### 📱 **User Benefits**
+- **Cleaner Reviews**: Focus on actual code changes, not merge commit noise
+- **Flexibility**: Works with any AI tool, not just Claude
+- **Reliability**: Simplified approach reduces potential failure points
+- **Efficiency**: One-click prompt generation with immediate clipboard copy
+
 ## [0.0.40] - 2025-06-27
 
 ### 🤖 Major Feature - AI Review Integration

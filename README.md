@@ -107,8 +107,6 @@ This extension is designed for **multi-repository review management** and works 
 | `githubReviewManager.playSound` | Play sound when new review requests arrive | `true` |
 | `githubReviewManager.groupByRepository` | Group review requests by repository in tree view | `true` |
 | `githubReviewManager.repositoryFilter` | **🔍 Filter to specific repositories only** - Show review requests only from specified repositories (e.g., `["mycompany/web-app", "personal/project"]`). Leave empty to show all repositories. | `[]` |
-| `githubReviewManager.aiReview.retentionDays` | **🗃️ AI Review File Retention** - Number of days to keep AI review files before automatic cleanup | `30` |
-| `githubReviewManager.aiReview.autoCleanup` | **🛡️ Safe Auto-cleanup** - Automatically delete old AI review files with bulletproof safety validation | `true` |
 
 ### 🔍 Repository Filter Examples
 
@@ -151,28 +149,21 @@ The `repositoryFilter` setting allows you to focus on specific repositories. Her
 ## 🤖 AI Review Feature
 
 ### Overview
-Request comprehensive AI code reviews for any pull request directly from VS Code. The extension integrates with Claude Code to provide intelligent, context-aware code analysis.
+Generate comprehensive AI review prompts for any pull request directly from VS Code. The extension creates intelligent, context-aware prompts that work with any AI tool (Claude, ChatGPT, Gemini, etc.).
 
 ### How to Use
 1. **Right-click** on any PR item in the GitHub Review Manager
-2. **Select "Request AI Review"** from the context menu
-3. **Choose your method**:
-   - **🔧 Claude Code CLI**: Automatically execute if you have Claude CLI installed
-   - **📋 Copy to Clipboard**: Copy the review prompt to paste into Claude Code (recommended)
+2. **Select "Generate AI Review Prompt"** from the context menu
+3. **AI review prompt is automatically copied to clipboard**
+4. **Paste into your preferred AI tool** for instant comprehensive review
 
-### What's Included in AI Reviews
+### What's Included in AI Review Prompts
 The extension automatically gathers and formats:
 
 - **📋 PR Information**: Title, repository, author, status, and statistics
 - **📝 PR Description**: Complete description and context from GitHub
-- **🔍 Code Changes**: Full diff showing all modifications
-- **📐 Project Rules**: Automatically detects and includes project guidelines from:
-  - `.cursor/rules/rules.md`
-  - `.cursor/rules.md` 
-  - `CLAUDE.md`
-  - `CODING_GUIDELINES.md`
-  - `DEVELOPMENT.md`
-  - `CONTRIBUTING.md`
+- **🔍 Code Changes**: Clean diff showing actual changes (merge commits excluded)
+- **🎯 Smart Filtering**: Automatically filters out merge commits to focus on actual code changes
 
 ### Language Detection
 The extension intelligently detects the primary language used in PR titles and descriptions:
@@ -180,70 +171,54 @@ The extension intelligently detects the primary language used in PR titles and d
 - **🇺🇸 English**: Uses English prompts for international projects
 - **🧠 Smart Detection**: Uses character analysis and linguistic patterns for accuracy
 
-### Review Output Options
+### Key Features
 
-#### 📋 Clipboard Method (Recommended)
-- Copies formatted review prompt to your clipboard
-- Paste directly into Claude Code for instant review
-- No file management needed - just copy and paste!
+#### 🎯 **Smart Merge Commit Filtering**
+- Automatically excludes merge commits from diff analysis
+- Works with any base branch (main, develop, feature branches)
+- Focuses on actual code changes, not branch synchronization
 
-#### 🔧 CLI Method
-- Automatically executes `claude` command if available
-- Saves review results to `reviews/` folder
-- Organized with timestamps: `PR-{repo}-{number}-{timestamp}.md`
+#### 📋 **Universal AI Tool Compatibility**
+- Works with Claude, ChatGPT, Gemini, and any AI tool
+- Clean, formatted prompts ready for immediate use
+- No dependency on specific CLI tools or APIs
 
-### File Management & Safety
+#### 🌍 **Intelligent Language Support**
+- Auto-detects Japanese vs English content
+- Generates appropriate prompts in the detected language
+- Perfect for international development teams
 
-#### 🗃️ Automatic Organization
-- Reviews saved in `reviews/` folder (workspace or temp directory)
-- Clear naming: `PR-owner-repo-123-2025-06-27T18-03-07.md`
-- Rich markdown formatting with tables and sections
-
-#### 🛡️ Safe Auto-cleanup
-- **Bulletproof Safety**: Only deletes extension-generated files
-- **Strict Pattern Matching**: Uses regex validation `^PR-.+-\d+-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.md$`
-- **Configurable Retention**: Default 30 days, adjustable 1-365 days
-- **User Protection**: Impossible to accidentally delete your other files
-
-#### ⚙️ Configuration
-```json
-{
-  "githubReviewManager.aiReview.retentionDays": 30,
-  "githubReviewManager.aiReview.autoCleanup": true
-}
-```
-
-### Example Review Output Structure
+### Example Review Prompt Structure
 
 ```markdown
-# AI Code Review: Fix authentication bug
+# PR Review Request
 
 ## PR Information
-| Field | Value |
-|-------|-------|
-| Repository | mycompany/webapp |
-| PR Number | #123 |
-| Author | developer-name |
-| Status | Ready for Review |
+- **Title**: Fix authentication bug
+- **Repository**: mycompany/webapp
+- **Author**: developer-name
+- **Status**: Ready for Review
 
-## Change Statistics
-| Metric | Count |
-|--------|-------|
-| Files Changed | 5 |
-| Lines Added | +45 |
-| Lines Deleted | -12 |
+## Changes Overview
+- **Files Changed**: 5
+- **Additions**: 45
+- **Deletions**: 12
 
----
+## Code Changes
+```diff
+[Clean diff with actual changes, merge commits excluded]
+```
 
-[AI Review Content with comprehensive analysis]
+## Review Request
+Please provide a comprehensive code review for this pull request...
 ```
 
 ### Integration Benefits
-- **🎯 Context-Aware**: Includes project-specific rules and guidelines
-- **🌍 Multi-language**: Supports both Japanese and English workflows
-- **⚡ Efficient**: One-click from PR list to comprehensive review
-- **🔒 Safe**: Bulletproof file management with no risk to your files
-- **📱 Flexible**: Choose between automatic CLI or manual copy-paste workflows
+- **🎯 Universal Compatibility**: Works with any AI tool or service
+- **🌍 Multi-language**: Supports both Japanese and English workflows  
+- **⚡ Efficient**: One-click from PR list to ready-to-use prompt
+- **🧹 Clean Output**: Focused on actual changes, not merge noise
+- **📱 Simple**: Just copy, paste, and get instant AI reviews
 
 ## 🎯 How It Works
 
@@ -294,7 +269,7 @@ Hover over any review request to see comprehensive details:
 
 ### Context Actions
 - 🌐 **Open PR in Browser** - Open selected PR in your default browser
-- 🤖 **Request AI Review** - Generate comprehensive AI code reviews for pull requests
+- 🤖 **Generate AI Review Prompt** - Generate comprehensive AI review prompts for any AI tool
 
 ## 🎨 UI Components
 

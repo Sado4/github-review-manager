@@ -1,4 +1,3 @@
-import * as child_process from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
@@ -44,55 +43,13 @@ export class AIReviewService {
 				);
 			}
 
-			let reviewResult: string = "";
-
-			await vscode.window.withProgress(
-				{
-					location: vscode.ProgressLocation.Notification,
-					title: `AI Review for PR #${reviewRequest.id}`,
-					cancellable: false,
-				},
-				async (progress) => {
-					progress.report({ increment: 10, message: "Gathering PR information..." });
-
-					const context = await this.gatherReviewContext(reviewRequest);
-
-					progress.report({ increment: 30, message: "Preparing review request..." });
-
-					const reviewPrompt = this.buildReviewPrompt(context);
-
-					progress.report({ increment: 20, message: "Requesting AI review..." });
-
-					reviewResult = await this.executeClaudeCodeReview(reviewPrompt);
-
-					// Skip saving if clipboard review was used
-					if (reviewResult === "CLIPBOARD_REVIEW_COMPLETED") {
-						progress.report({ increment: 40, message: "Complete!" });
-						return;
-					}
-
-					progress.report({ increment: 30, message: "Saving review results..." });
-
-					await this.saveReviewResult(reviewRequest, reviewResult);
-
-					progress.report({ increment: 10, message: "Complete!" });
-				},
-			);
-
-			// Only show completion message for CLI reviews (not clipboard reviews)
-			if (reviewResult !== "CLIPBOARD_REVIEW_COMPLETED") {
-				vscode.window
-					.showInformationMessage(`AI review completed for PR #${reviewRequest.id}`, "Open Review")
-					.then((action) => {
-						if (action === "Open Review") {
-							this.openReviewFile(reviewRequest);
-						}
-					});
-			}
+			const context = await this.gatherReviewContext(reviewRequest);
+			const reviewPrompt = this.buildReviewPrompt(context);
+			await this.executeClaudeCodeReview(reviewPrompt);
 		} catch (error) {
-			console.error("AI Review failed:", error);
+			console.error("AI Review prompt generation failed:", error);
 			vscode.window.showErrorMessage(
-				`AI Review failed: ${error instanceof Error ? error.message : String(error)}`,
+				`AI Review prompt generation failed: ${error instanceof Error ? error.message : String(error)}`,
 			);
 		}
 	}
@@ -113,36 +70,6 @@ export class AIReviewService {
 	}
 
 	private async findProjectRules(): Promise<ProjectRules | null> {
-		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-		if (!workspaceFolder) {
-			console.warn("No workspace folder found, skipping project rules detection");
-			return null;
-		}
-
-		const rulesFiles = [
-			".cursor/rules/rules.md",
-			".cursor/rules.md",
-			"CLAUDE.md",
-			"CODING_GUIDELINES.md",
-			"DEVELOPMENT.md",
-			"CONTRIBUTING.md",
-		];
-
-		for (const rulesFile of rulesFiles) {
-			const rulesPath = path.join(workspaceFolder.uri.fsPath, rulesFile);
-			try {
-				if (fs.existsSync(rulesPath)) {
-					const rulesContent = fs.readFileSync(rulesPath, "utf-8");
-					return {
-						rulesContent,
-						rulesFile: rulesFile,
-					};
-				}
-			} catch (error) {
-				console.warn(`Could not read rules file ${rulesFile}:`, error);
-			}
-		}
-
 		return null;
 	}
 
@@ -289,360 +216,26 @@ ${context.diff}
 		try {
 			fs.writeFileSync(tempFile, prompt);
 
-			const method = await vscode.window.showQuickPick(
-				[
-					{
-						label: "$(terminal) Use Claude Code CLI",
-						description: "Automatically execute claude command",
-						detail: "Requires claude CLI to be installed and configured",
-					},
-					{
-						label: "$(clippy) Copy to Clipboard",
-						description: "Copy review prompt to clipboard",
-						detail: "Paste directly into Claude Code - most convenient method",
-					},
-				],
-				{
-					placeHolder: "Choose how to request AI review",
-					ignoreFocusOut: true,
-				},
+			// Copy prompt to clipboard automatically
+			await vscode.env.clipboard.writeText(prompt);
+			fs.unlinkSync(tempFile);
+
+			const action = await vscode.window.showInformationMessage(
+				"AI review prompt generated and copied to clipboard! Paste it into your preferred AI tool for review.",
+				"Open Claude.ai",
+				"Done",
 			);
 
-			if (!method) {
-				fs.unlinkSync(tempFile);
-				throw new Error("AI review cancelled by user");
+			if (action === "Open Claude.ai") {
+				vscode.env.openExternal(vscode.Uri.parse("https://claude.ai"));
 			}
 
-			if (method.label.includes("CLI")) {
-				return await this.executeCLIReview(tempFile);
-			} else {
-				return await this.executeClipboardReview(tempFile, prompt);
-			}
+			return "AI review prompt generated and copied to clipboard. Please paste into your preferred AI tool to get the review.";
 		} catch (error) {
 			if (fs.existsSync(tempFile)) {
 				fs.unlinkSync(tempFile);
 			}
 			throw error;
-		}
-	}
-
-	private async executeCLIReview(tempFile: string): Promise<string> {
-		return new Promise((resolve, reject) => {
-			let command = "claude";
-			// Check if claude is available in PATH first
-			child_process.exec("which claude", (error, stdout) => {
-				if (!error && stdout.trim()) {
-					command = stdout.trim();
-				}
-
-				child_process.exec(
-					`"${command}" "${tempFile}"`,
-					{
-						timeout: 60000, // 60 second timeout
-						maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-						env: {
-							...process.env,
-							PATH: `${process.env.PATH}:${process.env.HOME}/.nodenv/shims:${process.env.HOME}/.nodenv/bin`,
-						},
-					},
-					(error, stdout, stderr) => {
-						fs.unlinkSync(tempFile);
-
-						if (error) {
-							reject(
-								new Error(
-									`Claude CLI failed: ${error.message}\n\nTip: Try the "Manual Copy & Paste" method instead, which is more reliable.\n\nFor CLI usage, ensure Claude CLI is properly installed and accessible in your PATH.`,
-								),
-							);
-							return;
-						}
-
-						if (stderr) {
-							console.warn("Claude CLI stderr:", stderr);
-						}
-
-						if (!stdout || stdout.trim().length < 50) {
-							reject(new Error("Claude CLI returned insufficient response"));
-							return;
-						}
-
-						resolve(stdout.trim());
-					},
-				);
-			});
-		});
-	}
-
-	private async executeClipboardReview(tempFile: string, prompt: string): Promise<string> {
-		try {
-			// Copy prompt to clipboard
-			await vscode.env.clipboard.writeText(prompt);
-
-			// Clean up temp file
-			fs.unlinkSync(tempFile);
-
-			// Show success message with instructions
-			await vscode.window.showInformationMessage(
-				"Review prompt copied to clipboard!",
-				{
-					modal: false,
-					detail:
-						"The AI review prompt has been copied to your clipboard.\n\nNext steps:\n1. Paste the prompt into Claude Code\n2. Claude will provide the review automatically\n\nNo need to paste the response back - you're all set!",
-				},
-				"Got it!",
-			);
-
-			// Return empty string to indicate completion without further processing
-			return "CLIPBOARD_REVIEW_COMPLETED";
-		} catch (error) {
-			fs.unlinkSync(tempFile);
-			throw new Error(
-				`Failed to copy to clipboard: ${error instanceof Error ? error.message : String(error)}`,
-			);
-		}
-	}
-
-	private async saveReviewResult(
-		reviewRequest: ReviewRequest,
-		reviewResult: string,
-	): Promise<void> {
-		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-		let reviewsDir: string;
-
-		if (!workspaceFolder) {
-			// Use OS temp directory if no workspace is open
-			const os = require("node:os");
-			reviewsDir = path.join(os.tmpdir(), "github-review-manager", "reviews");
-		} else {
-			reviewsDir = path.join(workspaceFolder.uri.fsPath, "reviews");
-		}
-		if (!fs.existsSync(reviewsDir)) {
-			fs.mkdirSync(reviewsDir, { recursive: true });
-		}
-
-		const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-		const repoName = reviewRequest.repository.replace("/", "-");
-		const fileName = `PR-${repoName}-${reviewRequest.id}-${timestamp}.md`;
-		const filePath = path.join(reviewsDir, fileName);
-
-		// Format the review result for better readability
-		const formattedReviewResult = this.formatReviewResult(reviewResult);
-
-		const isJapanese = this.detectJapanese(reviewRequest.title, "");
-
-		const reviewContent = isJapanese
-			? this.createJapaneseReviewFile(reviewRequest, formattedReviewResult)
-			: this.createEnglishReviewFile(reviewRequest, formattedReviewResult);
-
-		fs.writeFileSync(filePath, reviewContent);
-
-		// Auto-cleanup old files if enabled
-		await this.performAutoCleanup(reviewsDir);
-	}
-
-	private async performAutoCleanup(reviewsDir: string): Promise<void> {
-		try {
-			const config = vscode.workspace.getConfiguration("githubReviewManager.aiReview");
-			const autoCleanup = config.get<boolean>("autoCleanup", true);
-			const retentionDays = config.get<number>("retentionDays", 30);
-
-			if (!autoCleanup) return;
-
-			const files = fs.readdirSync(reviewsDir);
-			const cutoffDate = new Date();
-			cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
-
-			let deletedCount = 0;
-
-			for (const file of files) {
-				// 厳格な安全チェック: 拡張機能が生成したファイルのみを対象
-				const extensionFilePattern = /^PR-.+-\d+-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.md$/;
-				if (!extensionFilePattern.test(file)) continue;
-
-				const filePath = path.join(reviewsDir, file);
-				const stats = fs.statSync(filePath);
-
-				if (stats.mtime < cutoffDate) {
-					fs.unlinkSync(filePath);
-					deletedCount++;
-				}
-			}
-
-			if (deletedCount > 0) {
-				console.log(
-					`GitHub Review Manager: Cleaned up ${deletedCount} old review files (older than ${retentionDays} days)`,
-				);
-			}
-		} catch (error) {
-			console.warn("GitHub Review Manager: Auto-cleanup failed:", error);
-		}
-	}
-
-	private formatReviewResult(reviewResult: string): string {
-		// Clean up the review result for better markdown formatting
-		let formatted = reviewResult.trim();
-
-		// Remove leading/trailing whitespace from each line
-		formatted = formatted
-			.split("\n")
-			.map((line) => line.trim())
-			.join("\n");
-
-		// Fix common formatting issues from Claude Code output
-		// Remove excessive spaces
-		formatted = formatted.replace(/\s{2,}/g, " ");
-
-		// Ensure proper line breaks after headings
-		formatted = formatted.replace(/^(#{1,6}.*?)$/gm, "$1\n");
-
-		// Add proper spacing before headings (except at start)
-		formatted = formatted.replace(/([^\n])\n(#{1,6})/gm, "$1\n\n$2");
-
-		// Ensure proper spacing around code blocks
-		formatted = formatted.replace(/```(\w*)\n/g, "\n```$1\n");
-		formatted = formatted.replace(/\n```$/gm, "\n```\n");
-		formatted = formatted.replace(/([^`])\n```/g, "$1\n\n```");
-
-		// Ensure proper spacing around lists
-		formatted = formatted.replace(/([^\n])\n([-*+]|\d+\.)\s/g, "$1\n\n$2 ");
-
-		// Fix bullet points and numbered lists formatting
-		formatted = formatted.replace(/^([-*+]|\d+\.)\s*/gm, "\n$1 ").trim();
-
-		// Add spacing around emphasis (**, *, etc.)
-		formatted = formatted.replace(/([^*])\*\*([^*]+)\*\*([^*])/g, "$1 **$2** $3");
-		formatted = formatted.replace(/([^*])\*([^*]+)\*([^*])/g, "$1 *$2* $3");
-
-		// Fix paragraph spacing
-		formatted = formatted.replace(/([.!?])\s*\n([A-Z])/g, "$1\n\n$2");
-
-		// Clean up multiple line breaks but preserve intentional formatting
-		formatted = formatted.replace(/\n{4,}/g, "\n\n\n");
-		formatted = formatted.replace(/\n{3}/g, "\n\n");
-
-		// Ensure sections are properly separated
-		const sections = [
-			"## 総合評価",
-			"## Overall Assessment",
-			"## 優秀な点",
-			"## Strengths",
-			"## コード品質",
-			"## Code Quality",
-			"## 改善提案",
-			"## Areas for Improvement",
-			"## 改善点",
-			"## セキュリティ",
-			"## Security",
-			"## テスト",
-			"## Testing",
-			"## アクション",
-			"## Action Items",
-			"## 結論",
-			"## Conclusion",
-		];
-
-		sections.forEach((section) => {
-			const regex = new RegExp(
-				`([^\\n])\\n(${section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-				"g",
-			);
-			formatted = formatted.replace(regex, "$1\n\n$2");
-		});
-
-		return formatted;
-	}
-
-	private createEnglishReviewFile(reviewRequest: ReviewRequest, reviewResult: string): string {
-		return `# AI Code Review: ${reviewRequest.title}
-
-## PR Information
-
-| Field | Value |
-|-------|-------|
-| Repository | ${reviewRequest.repository} |
-| PR Number | #${reviewRequest.id} |
-| Author | ${reviewRequest.author} |
-| URL | [View PR](${reviewRequest.url}) |
-| Status | ${reviewRequest.draft ? "Draft" : "Ready for Review"} |
-| Generated | ${new Date().toLocaleString()} |
-
-## Change Statistics
-
-| Metric | Count |
-|--------|-------|
-| Files Changed | ${reviewRequest.changedFiles} |
-| Lines Added | +${reviewRequest.additions} |
-| Lines Deleted | -${reviewRequest.deletions} |
-| Review Comments | ${reviewRequest.reviewComments} |
-
----
-
-${reviewResult}
-
----
-
-*Generated by GitHub Review Manager AI Review Feature*
-`;
-	}
-
-	private createJapaneseReviewFile(reviewRequest: ReviewRequest, reviewResult: string): string {
-		return `# AIコードレビュー: ${reviewRequest.title}
-
-## PR情報
-
-| 項目 | 値 |
-|------|-----|
-| リポジトリ | ${reviewRequest.repository} |
-| PR番号 | #${reviewRequest.id} |
-| 作成者 | ${reviewRequest.author} |
-| URL | [PRを確認](${reviewRequest.url}) |
-| ステータス | ${reviewRequest.draft ? "ドラフト" : "レビュー準備完了"} |
-| 生成日時 | ${new Date().toLocaleString("ja-JP")} |
-
-## 変更統計
-
-| 項目 | 数 |
-|------|-----|
-| 変更ファイル数 | ${reviewRequest.changedFiles} |
-| 追加行数 | +${reviewRequest.additions} |
-| 削除行数 | -${reviewRequest.deletions} |
-| レビューコメント数 | ${reviewRequest.reviewComments} |
-
----
-
-${reviewResult}
-
----
-
-*GitHub Review Manager AIレビュー機能により生成*
-`;
-	}
-
-	private async openReviewFile(reviewRequest: ReviewRequest): Promise<void> {
-		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-		let reviewsDir: string;
-
-		if (!workspaceFolder) {
-			// Use OS temp directory if no workspace is open
-			const os = require("node:os");
-			reviewsDir = path.join(os.tmpdir(), "github-review-manager", "reviews");
-		} else {
-			reviewsDir = path.join(workspaceFolder.uri.fsPath, "reviews");
-		}
-		const repoName = reviewRequest.repository.replace("/", "-");
-		const pattern = `PR-${repoName}-${reviewRequest.id}-*.md`;
-
-		try {
-			const files = fs.readdirSync(reviewsDir);
-			const reviewFile = files.find((file) => file.match(pattern.replace("*", ".*")));
-
-			if (reviewFile) {
-				const filePath = path.join(reviewsDir, reviewFile);
-				const document = await vscode.workspace.openTextDocument(filePath);
-				await vscode.window.showTextDocument(document);
-			}
-		} catch (error) {
-			console.error("Could not open review file:", error);
 		}
 	}
 }
