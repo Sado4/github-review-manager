@@ -54,7 +54,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			const token = await vscode.window.showInputBox({
 				prompt: "Enter your GitHub Personal Access Token (Classic)",
 				password: true,
-				placeHolder: "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				placeHolder: "ghp_...",
 				validateInput: (value) => {
 					if (!value) {
 						return "Token cannot be empty";

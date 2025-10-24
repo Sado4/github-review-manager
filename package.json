@@ -2,7 +2,7 @@
   "name": "github-review-manager",
   "displayName": "GitHub Review Manager",
   "description": "Manage GitHub pull request review requests with automatic updates and notifications.",
-  "version": "0.0.41",
+  "version": "0.0.42",
   "publisher": "Sado4",
   "engines": {
     "vscode": "^1.84.0"

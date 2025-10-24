@@ -162,8 +162,10 @@ The extension automatically gathers and formats:
 
 - **📋 PR Information**: Title, repository, author, status, and statistics
 - **📝 PR Description**: Complete description and context from GitHub
+- **💬 Existing Reviews**: All review comments and discussions from other reviewers
 - **🔍 Code Changes**: Clean diff showing actual changes (merge commits excluded)
 - **🎯 Smart Filtering**: Automatically filters out merge commits to focus on actual code changes
+- **🔄 Context-Aware**: AI considers existing feedback to avoid duplication and build upon discussions
 
 ### Language Detection
 The extension intelligently detects the primary language used in PR titles and descriptions:
@@ -174,9 +176,18 @@ The extension intelligently detects the primary language used in PR titles and d
 ### Key Features
 
 #### 🎯 **Smart Merge Commit Filtering**
-- Automatically excludes merge commits from diff analysis
+- Automatically excludes merge commits from diff analysis using multiple detection methods:
+  - Parent commit count analysis (commits with multiple parents)
+  - Commit message pattern matching ("Merge branch", "Merge pull request", etc.)
 - Works with any base branch (main, develop, feature branches)
 - Focuses on actual code changes, not branch synchronization
+- Debug logging to track filtered commits
+
+#### 💬 **Existing Review Integration**
+- Captures all existing review comments and discussions
+- Includes both high-level review summaries (approve/request changes/comment) and line-level comments
+- Shows reviewer names, timestamps, and comment context (file path, line numbers, diff hunks)
+- AI can avoid duplicating existing feedback and build upon ongoing discussions
 
 #### 📋 **Universal AI Tool Compatibility**
 - Works with Claude, ChatGPT, Gemini, and any AI tool
@@ -204,6 +215,22 @@ The extension intelligently detects the primary language used in PR titles and d
 - **Additions**: 45
 - **Deletions**: 12
 
+## Existing Reviews
+
+### Review Summaries (2 reviews)
+**reviewer1** (APPROVED) - 2024-10-24 10:30:00
+> Looks good overall, just minor concerns about error handling
+
+**reviewer2** (CHANGES_REQUESTED) - 2024-10-24 11:15:00
+> Need to add tests for the new authentication flow
+
+### Line Comments (3 comments)
+**reviewer1** on `src/auth.ts:45` - 2024-10-24 10:32:00
+```
++ const token = validateToken(userInput);
+```
+> Should add input sanitization here before validation
+
 ## Code Changes
 ```diff
 [Clean diff with actual changes, merge commits excluded]
@@ -211,13 +238,17 @@ The extension intelligently detects the primary language used in PR titles and d
 
 ## Review Request
 Please provide a comprehensive code review for this pull request...
+6. **Existing Reviews**: Take into account the existing reviews and comments above.
+   Avoid repeating points already made, and consider building upon or addressing those discussions.
 ```
 
 ### Integration Benefits
 - **🎯 Universal Compatibility**: Works with any AI tool or service
-- **🌍 Multi-language**: Supports both Japanese and English workflows  
+- **🌍 Multi-language**: Supports both Japanese and English workflows
 - **⚡ Efficient**: One-click from PR list to ready-to-use prompt
 - **🧹 Clean Output**: Focused on actual changes, not merge noise
+- **💬 Context-Aware**: Includes existing review discussions for informed analysis
+- **🔄 Collaborative**: AI builds upon team feedback instead of duplicating work
 - **📱 Simple**: Just copy, paste, and get instant AI reviews
 
 ## 🎯 How It Works

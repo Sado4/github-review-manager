@@ -3,7 +3,7 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import type { ReviewRequest } from "../types";
 import { getConfig } from "./configService";
-import { GitHubService } from "./githubService";
+import { GitHubService, type PRReviewsData } from "./githubService";
 
 export interface ProjectRules {
 	rulesContent: string;
@@ -15,6 +15,7 @@ export interface ReviewContext {
 	diff: string;
 	projectRules: ProjectRules | null;
 	prDescription: string;
+	reviews: PRReviewsData;
 }
 
 export class AIReviewService {
@@ -55,10 +56,11 @@ export class AIReviewService {
 	}
 
 	private async gatherReviewContext(reviewRequest: ReviewRequest): Promise<ReviewContext> {
-		const [diff, prDescription, projectRules] = await Promise.all([
+		const [diff, prDescription, projectRules, reviews] = await Promise.all([
 			this.githubService.fetchPRDiff(reviewRequest),
 			this.githubService.fetchPRDescription(reviewRequest),
 			this.findProjectRules(),
+			this.githubService.fetchPRReviews(reviewRequest),
 		]);
 
 		return {
@@ -66,6 +68,7 @@ export class AIReviewService {
 			diff,
 			projectRules,
 			prDescription,
+			reviews,
 		};
 	}
 
@@ -130,6 +133,42 @@ ${context.projectRules.rulesContent}
 `;
 		}
 
+		// Add existing reviews section
+		if (context.reviews.reviews.length > 0 || context.reviews.reviewComments.length > 0) {
+			prompt += `## Existing Reviews
+
+`;
+
+			if (context.reviews.reviews.length > 0) {
+				prompt += `### Review Summaries (${context.reviews.reviews.length} review(s))
+`;
+				for (const review of context.reviews.reviews) {
+					prompt += `
+**${review.user}** (${review.state}) - ${new Date(review.submittedAt).toLocaleString()}
+${review.body ? `> ${review.body}\n` : "_No comment_\n"}
+`;
+				}
+			}
+
+			if (context.reviews.reviewComments.length > 0) {
+				prompt += `
+### Line Comments (${context.reviews.reviewComments.length} comment(s))
+`;
+				for (const comment of context.reviews.reviewComments) {
+					prompt += `
+**${comment.user}** on \`${comment.path}\`${comment.line ? `:${comment.line}` : ""} - ${new Date(comment.createdAt).toLocaleString()}
+\`\`\`
+${comment.diffHunk}
+\`\`\`
+> ${comment.body}
+
+`;
+				}
+			}
+
+			prompt += "\n";
+		}
+
 		prompt += `## Code Changes
 \`\`\`diff
 ${context.diff}
@@ -143,6 +182,7 @@ Please provide a comprehensive code review for this pull request. Consider:
 3. **Project Compliance**: Ensure the changes follow the project rules and conventions${context.projectRules ? " mentioned above" : ""}
 4. **Suggestions**: Provide constructive feedback and improvement suggestions
 5. **Testing**: Comment on test coverage and testing approach
+${context.reviews.reviews.length > 0 || context.reviews.reviewComments.length > 0 ? "6. **Existing Reviews**: Take into account the existing reviews and comments above. Avoid repeating points already made, and consider building upon or addressing those discussions." : ""}
 
 Please structure your review with clear sections and actionable feedback. Format your response in clear, readable markdown with proper headings and bullet points.`;
 
@@ -176,6 +216,42 @@ ${context.projectRules.rulesContent}
 `;
 		}
 
+		// Add existing reviews section
+		if (context.reviews.reviews.length > 0 || context.reviews.reviewComments.length > 0) {
+			prompt += `## 既存のレビュー
+
+`;
+
+			if (context.reviews.reviews.length > 0) {
+				prompt += `### レビューサマリー (${context.reviews.reviews.length}件)
+`;
+				for (const review of context.reviews.reviews) {
+					prompt += `
+**${review.user}** (${review.state}) - ${new Date(review.submittedAt).toLocaleString("ja-JP")}
+${review.body ? `> ${review.body}\n` : "_コメントなし_\n"}
+`;
+				}
+			}
+
+			if (context.reviews.reviewComments.length > 0) {
+				prompt += `
+### 行コメント (${context.reviews.reviewComments.length}件)
+`;
+				for (const comment of context.reviews.reviewComments) {
+					prompt += `
+**${comment.user}** の \`${comment.path}\`${comment.line ? `:${comment.line}` : ""} へのコメント - ${new Date(comment.createdAt).toLocaleString("ja-JP")}
+\`\`\`
+${comment.diffHunk}
+\`\`\`
+> ${comment.body}
+
+`;
+				}
+			}
+
+			prompt += "\n";
+		}
+
 		prompt += `## コード変更内容
 \`\`\`diff
 ${context.diff}
@@ -189,6 +265,7 @@ ${context.diff}
 3. **プロジェクト準拠**: ${context.projectRules ? "上記の" : ""}プロジェクトルールや規約への準拠確認
 4. **改善提案**: 建設的なフィードバックと改善案の提供
 5. **テスト**: テストカバレッジとテストアプローチについてのコメント
+${context.reviews.reviews.length > 0 || context.reviews.reviewComments.length > 0 ? "6. **既存レビュー**: 上記の既存レビューやコメントを考慮してください。既に指摘されている点の重複を避け、それらの議論を踏まえた上での追加の観点を提供してください。" : ""}
 
 明確なセクション分けと実行可能なフィードバックで構造化してください。読みやすいマークダウン形式で、適切な見出しと箇条書きを使用してレスポンスをフォーマットしてください。`;
 

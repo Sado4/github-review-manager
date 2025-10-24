@@ -1,6 +1,29 @@
 import { Octokit } from "@octokit/rest";
 import type { ReviewRequest } from "../types";
 
+export interface ReviewComment {
+	id: number;
+	body: string;
+	user: string;
+	createdAt: string;
+	path: string;
+	line: number | null;
+	diffHunk: string;
+}
+
+export interface Review {
+	id: number;
+	user: string;
+	state: string;
+	body: string;
+	submittedAt: string;
+}
+
+export interface PRReviewsData {
+	reviews: Review[];
+	reviewComments: ReviewComment[];
+}
+
 export class GitHubService {
 	private octokit: Octokit | null = null;
 
@@ -115,11 +138,24 @@ export class GitHubService {
 			});
 
 			// Filter out merge commits (commits with more than 1 parent)
-			const nonMergeCommits = commits.filter((commit) => commit.parents.length <= 1);
+			// Also filter out commits with "Merge" in the commit message as an additional safeguard
+			const nonMergeCommits = commits.filter((commit) => {
+				const isMergeCommit = commit.parents.length > 1;
+				const hasMergeMessage =
+					commit.commit.message.startsWith("Merge branch") ||
+					commit.commit.message.startsWith("Merge pull request") ||
+					commit.commit.message.includes("Merge remote-tracking branch");
+
+				return !isMergeCommit && !hasMergeMessage;
+			});
 
 			if (nonMergeCommits.length === 0) {
 				return "No non-merge commits found in this PR.";
 			}
+
+			console.log(
+				`Filtered ${commits.length - nonMergeCommits.length} merge commits out of ${commits.length} total commits`,
+			);
 
 			// Get diff from base to last non-merge commit
 			const lastCommitSha = nonMergeCommits[nonMergeCommits.length - 1].sha;
@@ -173,6 +209,51 @@ export class GitHubService {
 			return prDetail.body || "";
 		} catch (error) {
 			console.error(`Error fetching description for PR #${reviewRequest.id}:`, error);
+			throw error;
+		}
+	}
+
+	async fetchPRReviews(reviewRequest: ReviewRequest): Promise<PRReviewsData> {
+		if (!this.octokit) {
+			throw new Error("GitHub token not configured");
+		}
+
+		try {
+			const [owner, repo] = reviewRequest.repository.split("/");
+
+			const [{ data: reviews }, { data: reviewComments }] = await Promise.all([
+				this.octokit.rest.pulls.listReviews({
+					owner,
+					repo,
+					pull_number: reviewRequest.id,
+				}),
+				this.octokit.rest.pulls.listReviewComments({
+					owner,
+					repo,
+					pull_number: reviewRequest.id,
+				}),
+			]);
+
+			return {
+				reviews: reviews.map((review) => ({
+					id: review.id,
+					user: review.user?.login || "Unknown",
+					state: review.state,
+					body: review.body || "",
+					submittedAt: review.submitted_at || "",
+				})),
+				reviewComments: reviewComments.map((comment) => ({
+					id: comment.id,
+					body: comment.body,
+					user: comment.user?.login || "Unknown",
+					createdAt: comment.created_at,
+					path: comment.path,
+					line: comment.line || null,
+					diffHunk: comment.diff_hunk,
+				})),
+			};
+		} catch (error) {
+			console.error(`Error fetching reviews for PR #${reviewRequest.id}:`, error);
 			throw error;
 		}
 	}

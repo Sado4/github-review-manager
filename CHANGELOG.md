@@ -2,6 +2,27 @@
 
 All notable changes to the "github-review-manager" extension will be documented in this file.
 
+## [0.0.42] - 2025-10-24
+
+### ✨ Enhanced AI Review with Existing Review Context
+
+#### 🎯 **Context-Aware AI Reviews**
+- **Existing Review Integration**: AI review prompts now include all existing review comments and discussions
+- **Duplicate Prevention**: AI can avoid repeating points already made by other reviewers
+- **Review Continuity**: Build upon existing discussions and feedback threads
+- **Complete Context**: Includes both review summaries (approve/request changes/comment) and line-level comments
+
+#### 🔧 **Improved Merge Commit Filtering**
+- **Enhanced Detection**: Added commit message-based filtering in addition to parent count checking
+- **Pattern Matching**: Filters out "Merge branch", "Merge pull request", and "Merge remote-tracking branch" commits
+- **Cleaner Diffs**: Even more reliable exclusion of merge-related changes from AI review prompts
+- **Debug Logging**: Added logging to track how many merge commits were filtered
+
+#### 📊 **Review Data Structure**
+- **Comprehensive Review Info**: Captures review state, author, timestamp, and full comment text
+- **Line-Level Comments**: Includes file path, line number, diff hunk, and comment body
+- **Multi-Language Support**: Properly formatted timestamps for both English and Japanese prompts
+
 ## [0.0.41] - 2025-06-28
 
 ### 🔧 Major Improvements - AI Review Enhancement
